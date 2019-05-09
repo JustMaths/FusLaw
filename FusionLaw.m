@@ -41,12 +41,25 @@ intrinsic Print(T::FusLaw)
   Prints a fusion table.
   }
   if assigned T`name then
-    printf "%o fusion table.\n", T`name;
+    printf "%o fusion table.\n\n", T`name;
   end if;
-  L := T`table;
+
   obj := T`set;
+  if not Type(Universe(T`set)) in { RngInt, FldRat} then
+    function Name(x)
+      return Position(obj, x);
+    end function;
+    relabel := true;
+  else
+    function Name(x)
+      return x;
+    end function;
+    relabel := false;
+  end if;
   
-  top := [ " " cat Sprint(x) cat " " : x in obj ];
+  L := [[ {@ Name(x) : x in S@} : S in r ] : r in T`table];
+  
+  top := [ " " cat Sprint(Name(x)) cat " " : x in obj ];
   width1st := Max([#t : t in top]);
   table := [ [Sprintf("%*o|", width1st, top[i])] cat [Substring(Sprint(L[i,j]), 3, #Sprint(L[i,j])-4) : j in [1..#L[i]]] : i in [1..#L]];
   widths := [ Max([#table[i,j] : i in [1..#table]] cat [j eq 1 select 0 else #top[j-1]]) : j in [1..#table+1]];
@@ -58,8 +71,13 @@ intrinsic Print(T::FusLaw)
     printf "\n";
   end for;
   
+  if relabel then
+    print "\nWhere we use the labelling\n";
+    printf Join([ Sprintf("%o :-> %o", Name(i), i) : i in obj], "\n");
+  end if;
+  
   if assigned T`evaluation then
-    printf "Evaluation is %o", T`evaluation;
+    printf "\nEvaluation is %o", T`evaluation;
   end if;
 end intrinsic;
 
@@ -170,24 +188,6 @@ intrinsic IsCoercible(T::FusLaw, x::.) -> BoolElt, .
     return false, _;
   end if;
 end intrinsic;
-
-/*
-  if ExtendedType(x) in {SeqEnum[FusLawElt], SetEnum[FusLawElt], SetIndx[FusLawElt]} then
-    if exists{ i : i in x | not IsCoercible(T, i)} then
-      return false, _;
-    end if;
-    im := [ F!i : i in x];
-    if Type(x) eq SetEnum then
-      return true, Set(im);
-    elif Type(x) eq SetIndx then
-      return true, IndexedSet(im);
-    else
-      return true, im;
-    end if;
-  end if;
-*/
-
-
 
 intrinsic Hash(x::FusLawElt) -> RngIntElt
   {
@@ -474,6 +474,38 @@ intrinsic HyperJordanTypeFusionLaw(eta::FldRatElt) -> FusLaw
   Returns the fusion table of extended Jordan-type eta.
   }
   return IsingTypeFusionLaw(2*eta, eta);
+end intrinsic;
+/*
+
+Creates the representation fusion law
+
+*/
+intrinsic RepresentationFusionLaw(G::Grp) -> FusLaw
+  {
+  Returns the representation fusion law for the group G.
+  }
+  return RepresentationFusionLaw(CharacterTable(G));
+end intrinsic;
+
+intrinsic RepresentationFusionLaw(CT::SeqEnum[AlgChtrElt]) -> FusLaw
+  {
+  Returns the representation fusion law for the group G.
+  }
+  T := New(FusLaw);
+  T`set := IndexedSet(CT);
+  T`table := [[ {@ C : C in CT | InnerProduct(XY, C) ne 0 where XY := CT[i]*CT[j] @} : j in [1..i]] : i in [1..#CT]];
+  // Now symmetrise
+  for i in [1..#CT] do
+    for j in [i+1..#CT] do
+      T`table[i,j] := T`table[j,i];
+    end for;
+  end for;
+  
+  if assigned Universe(CT)`Group then
+    T`name := Sprintf("Representation fusion law for %o", GroupName(Group(Universe(CT))));
+    T`directory := Sprintf("Rep_fusion_law_%o", MyGroupName(Group(Universe(CT))));
+  end if;
+  return T;
 end intrinsic;
 //-----------------------------------------------------------
 //

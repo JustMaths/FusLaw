@@ -2,7 +2,7 @@
 
 Code for saving and loading magma objects to/from JSON format.
 Written by Michael Fryers, 2016.
-Edited by Justin McInroy 2017.
+Edited by Justin McInroy 2017, 2018, 2019.
 
 */
 
@@ -36,6 +36,25 @@ intrinsic AssociativeArray(x::List) -> Assoc
     A[p[1]] := p[2];
   end for;
   return A;
+end intrinsic;
+/*
+
+Code to implement a group name which will work in older versions of magma too.  
+
+*/
+intrinsic MyGroupName(G::GrpPerm) -> MonStgElt
+  {
+  If GroupName is defined in magma (roughly version 2.21 or above) it returns GroupName, otherwise it returns order_num, where <order, num> is given by IdentifyGroup. A hash is used in place of a colon.
+  }
+  try
+    name := eval("GroupName(G)");
+    // magma/linux/something messes up directory names with colons, so need to substitute these...
+    name := Join(Split(name, ":"), "#");
+  catch e
+    ord, num := Explode(IdentifyGroup(G));
+    name := Sprintf("%o_%o", ord, num);
+  end try;
+  return name;
 end intrinsic;
 
 // Generic structures

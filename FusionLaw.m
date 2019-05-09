@@ -38,7 +38,7 @@ Pretty printing for Fusion tables!
 */
 intrinsic Print(T::FusLaw)
   {
-  Prints a fusion table.
+  Prints a fusion law.
   }
   if assigned T`name then
     printf "%o fusion table.\n\n", T`name;

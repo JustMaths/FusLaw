@@ -56,9 +56,9 @@ intrinsic Print(T::FusLaw)
     end function;
     relabel := false;
   end if;
-  
+
   L := [[ {@ Name(x) : x in S@} : S in r ] : r in T`table];
-  
+
   top := [ " " cat Sprint(Name(x)) cat " " : x in obj ];
   width1st := Max([#t : t in top]);
   table := [ [Sprintf("%*o|", width1st, top[i])] cat [Substring(Sprint(L[i,j]), 3, #Sprint(L[i,j])-4) : j in [1..#L[i]]] : i in [1..#L]];
@@ -70,12 +70,12 @@ intrinsic Print(T::FusLaw)
     end for;
     printf "\n";
   end for;
-  
+
   if relabel then
     print "\nWhere we use the labelling\n";
     printf Join([ Sprintf("%o :-> %o", Name(i), i) : i in obj], "\n");
   end if;
-  
+
   if assigned T`evaluation then
     printf "\nEvaluation is %o", T`evaluation;
   end if;
@@ -105,9 +105,9 @@ intrinsic AssignEvaluationMap(~T::FusLaw, f::Map: check:=true)
   if check then
     require not assigned T`evaluation: "The fusion law already has an assigned evaluation map.";
   end if;
-  
+
   require T`set subset Domain(f): "The fusion law is not a subset of the domain of the given map.";
-  
+
   T`evaluation := f;
   T`eigenvalues := T`set@f;
 end intrinsic;
@@ -120,7 +120,7 @@ intrinsic AssignEvaluationMap(T::FusLaw, f::Map: check:=true) -> FusLaw
   for attr in GetAttributes(FusLaw) do
     Tnew``attr := T``attr;
   end for;
-  
+
   AssignEvaluationMap(~Tnew, f: check:=check);
   return Tnew;
 end intrinsic;
@@ -169,7 +169,7 @@ intrinsic CreateElement(T::FusLaw, x::.) -> FusLawElt
   if assigned T`evaluation then
     xx`eigenvalue := xx`elt @ T`evaluation;
   end if;
-  
+
   return xx;
 end intrinsic;
 
@@ -180,7 +180,7 @@ intrinsic IsCoercible(T::FusLaw, x::.) -> BoolElt, .
   if Type(x) eq FusLawElt and x`parent eq T then
     return true, x;
   end if;
-  
+
   so, xx := IsCoercible(T`set, x);
   if so then
     return true, CreateElement(T, xx);
@@ -229,14 +229,14 @@ end intrinsic;
 intrinsic ChangeField(T::FusLaw, F::Fld, f::Map) -> FusLaw
   {
   If the fusion law has an evaluation map, changes its field of definition.
-  
+
   Note that we need to be able to coerce any scalars into the new field.  For example, the rationals to a finite field is ok, but not the other way.
   }
   if not assigned T`evaluation then
     print "No evaluation map assigned.";
     return T;
   end if;
-  
+
   im := Setseq(T`set)@(T`evaluation*f);
   return AssignEvaluationMap(T, map<T`set -> im | [<i, im[i]> : i in T`set]>: check := false);
 end intrinsic;
@@ -244,14 +244,14 @@ end intrinsic;
 intrinsic ChangeRing(T::FusLaw, R::Rng) -> FusLaw
   {
   If the fusion law has an evaluation map, changes its ring of definition.
-  
+
   Note that we need to be able to coerce any scalars into the new field.  For example, the rationals to a finite field is ok, but not the other way.
   }
   if not assigned T`evaluation then
     print "No evaluation map assigned.";
     return T;
   end if;
-  
+
   im := ChangeUniverse(Setseq(T`set)@T`evaluation, R);
   return AssignEvaluationMap(T, map<T`set -> im | [<i, im[i]> : i in T`set]>: check := false);
 end intrinsic;
@@ -271,19 +271,19 @@ intrinsic SubConstructor(T::FusLaw, t::.) -> FusLaw
   }
   t := Flat(t);
   require forall{ i : i in t | IsCoercible(T, i)}: "The second argument are not all in the fusion law.";
-  
+
   Tnew := New(FusLaw);
   Tnew`set := {@ (T!i)`elt : i in t @};
   Sort(~Tnew`set, func<x,y|Position(T`set, x) - Position(T`set, y)>);
-  
+
   pos := [Position(T`set, i) : i in Tnew`set];
   Tnew`table := [[ T`table[i,j] meet Tnew`set : j in pos] : i in pos];
-  
+
   if assigned T`evaluation then
     Tnew`eigenvalues := Tnew`set @ T`evaluation;
     Tnew`evaluation := map< Tnew`set -> Tnew`eigenvalues | [ <i, i@T`evaluation> : i in Tnew`set]>;
   end if;
-  
+
   return Tnew;
 end intrinsic;
 /*
@@ -308,17 +308,17 @@ intrinsic FinestAdequateGrading(T::FusLaw) -> GrpPerm, Map
     gens := [* #(e meet g) ne 0 select e join g else g : g in gens *];
   end for;
   gens := {@ g : g in gens @};
-  
+
   // We set up a function to give the generator number of an eigenvalue
   genno := AssociativeArray();
   for e in set do
     assert exists(i){g : g in gens | e in g };
     genno[e] := Position(gens, i);
   end for;
-  
+
   F := FreeAbelianGroup(#gens);
   rels := [ F.genno[1] ];
-  
+
   // We build some relations
   e1 := gens[genno[1]];
   for i in e1 do
@@ -336,7 +336,7 @@ intrinsic FinestAdequateGrading(T::FusLaw) -> GrpPerm, Map
       end for;
     end for;
   end for;
-  
+
   G, map := quo<F|rels>;
   assert Order(G) le #set;
   GG, iso := PermutationGroup(G);
@@ -370,7 +370,7 @@ intrinsic UsefulFusionRules(T::FusLaw) -> SetIndx
       FT[j,i] := FT[i,j];
     end for;
   end for;
-  
+
   T`useful := {@ @};
   for i in [1..#subsets] do
     row := Set(FT[i]);
@@ -386,7 +386,7 @@ intrinsic UsefulFusionRules(T::FusLaw) -> SetIndx
       end if;
     end for;
   end for;
-  
+
   return T`useful;
 end intrinsic;
 //
@@ -413,7 +413,7 @@ intrinsic JordanFusionLaw(eta) -> FusLaw
   T`eigenvalues := IndexedSet(evals);
   T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
   _ := UsefulFusionRules(T);
-  
+
   return T;
 end intrinsic;
 /*
@@ -427,8 +427,8 @@ intrinsic MonsterFusionLaw() -> FusLaw
   }
   T := IsingTypeFusionLaw(1/4, 1/32);
   T`name := "Monster";
-  T`directory := "Monster_1,4_1,32";  
-/*  
+  T`directory := "Monster_1,4_1,32";
+/*
   T := New(FusLaw);
   T`name := "Monster";
   T`directory := "Monster_1,4_1,32";
@@ -439,7 +439,7 @@ intrinsic MonsterFusionLaw() -> FusLaw
   T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
   T`eigenvalues := IndexedSet(evals);
   _ := UsefulFusionRules(T);
-*/  
+*/
   return T;
 end intrinsic;
 /*
@@ -461,7 +461,7 @@ intrinsic IsingTypeFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
   T`eigenvalues := IndexedSet(evals);
   T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
   _ := UsefulFusionRules(T);
-  
+
   return T;
 end intrinsic;
 /*
@@ -500,13 +500,31 @@ intrinsic RepresentationFusionLaw(CT::SeqEnum[AlgChtrElt]) -> FusLaw
       T`table[i,j] := T`table[j,i];
     end for;
   end for;
-  
+
   if assigned Universe(CT)`Group then
     T`name := Sprintf("Representation fusion law for %o", GroupName(Group(Universe(CT))));
     T`directory := Sprintf("Rep_fusion_law_%o", MyGroupName(Group(Universe(CT))));
   end if;
   return T;
 end intrinsic;
+
+intrinsic RepresentationFusionLaw(D::LieRepDec) -> FusLaw
+  {
+  Returns the representation fusion law for the irreducible representations occuring in D
+  }
+  T := New(FusLaw);
+  T`set := Weights(D);
+  T`table := [[ {@ C : C in T`set | Multiplicity(T,C) ne 0 where T := TensorProduct(RootDatum(D),T`set[i],T`set[j])@} : j in [1..i]] : i in [1..#D]];
+  // Now symmetrise
+  for i in [1..#D] do
+    for j in [i+1..#D] do
+      T`table[i,j] := T`table[j,i];
+    end for;
+  end for;
+  T`name := Sprintf("Lie Representation fusion law for %o", RootDatum(D));
+  return T;
+end intrinsic;
+
 //-----------------------------------------------------------
 //
 // Code to load and save a fusion law in the json format
@@ -528,15 +546,15 @@ intrinsic FusTabToList(T::FusLaw) -> List
     Append(~L, <"name", T`name>);
     Append(~L, <"directory", T`directory>);
   end if;
-  
+
   set := Setseq(T`set);
   Append(~L, <"set", set>);
   Append(~L, <"table", T`table>);
-  
+
   if assigned T`evaluation then
     Append(~L, <"evaluation", set@T`evaluation>);
   end if;
-  
+
   return L;
 end intrinsic;
 /*
@@ -554,7 +572,7 @@ intrinsic FusionLaw(A::Assoc) -> FusLaw
   T`set := IndexedSet(Numbers(A["set"]));
   T`eigenvalues := IndexedSet(Numbers(A["eigenvalues"]));
   T`table := [ [ IndexedSet(Numbers(S)) : S in row ] : row in A["table"]];
-  
+
   if "name" in keys then
     T`name := A["name"];
     T`directory := A["directory"];
@@ -565,8 +583,8 @@ intrinsic FusionLaw(A::Assoc) -> FusLaw
     T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
     T`eigenvalues := IndexedSet(evals);
   end if;
-  
+
   _ := UsefulFusionRules(T);
-  
+
   return T;
 end intrinsic;

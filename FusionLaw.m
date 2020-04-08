@@ -77,12 +77,12 @@ intrinsic Print(T::FusLaw)
 
   if relabel then
     print "\nWhere we use the labelling\n";
-    printf Join([ Sprintf("%*o:-> %o", width1st, top[i], o) : i-> o in obj], "\n");
+    printf Join([ Sprintf("%*o:-> %o", width1st, top[i], obj[i]) : i in [1..#obj]], "\n");
   end if;
 
   if assigned T`evaluation then
     printf "\nWhere the evaluation is\n";
-    printf Join([ Sprintf("%*o:-> %o", width1st, top[i], o@T`evaluation) : i->o in obj], "\n");
+    printf Join([ Sprintf("%*o:-> %o", width1st, top[i], obj[i]@T`evaluation) : i in [1..#obj]], "\n");
   end if;
 end intrinsic;
 

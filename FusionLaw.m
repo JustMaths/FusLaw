@@ -543,6 +543,29 @@ end intrinsic;
 Returns the Jordan type fusion law.
 
 */
+intrinsic FusionLaw(T::FusTab) -> FusLaw
+  {
+  Converts a fusion table to a fusion law.  Old version to new version.
+  }
+
+  if T`name in {"Monster", "Ising", "Jordan"} then
+    params := [ al : al in T`eigenvalues | al notin {0,1} ];
+    params := Join([Sprintf("%o", al) : al in params], ",");
+    return eval(Sprintf("%oFusionLaw(%o)", T`name, params));
+  end if;
+  
+  Tnew := New(FusLaw);
+  Tnew`name := T`name;
+  Tnew`directory := T`directory;
+  Tnew`set := T`eigenvalues;
+  Tnew`law := T`table;
+  f := map< Tnew`set -> Tnew`set | i:->i, j:->j>;
+  AssignEvaluation(~Tnew, f);
+  _ := UsefulFusionRules(Tnew);
+
+  return Tnew;
+end intrinsic;
+
 intrinsic JordanFusionLaw(eta) -> FusLaw
   {
   Returns the Jordan type fusion law.
@@ -570,7 +593,7 @@ intrinsic MonsterFusionLaw() -> FusLaw
   {
   Returns the fusion table for the Monster.
   }
-  T := IsingTypeFusionLaw(1/4, 1/32);
+  T := IsingFusionLaw(1/4, 1/32);
   T`name := "Monster";
   T`directory := "Monster_1,4_1,32";
 
@@ -581,7 +604,7 @@ end intrinsic;
 Returns the Ising type law.
 
 */
-intrinsic IsingTypeFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
+intrinsic IsingFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
   {
   Returns the fusion table of Ising type alpha, beta.
   }
@@ -603,16 +626,23 @@ intrinsic IsingTypeFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
 
   return T;
 end intrinsic;
+
+intrinsic MonsterFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
+  {
+  Returns the fusion table of Ising type alpha, beta.
+  }
+  return IsingFusionLaw(alpha, beta);
+end intrinsic;
 /*
 
 Returns the extended Jordan-type law.
 
 */
-intrinsic HyperJordanTypeFusionLaw(eta::FldRatElt) -> FusLaw
+intrinsic HyperJordanFusionLaw(eta::FldRatElt) -> FusLaw
   {
   Returns the fusion table of extended Jordan-type eta.
   }
-  return IsingTypeFusionLaw(2*eta, eta);
+  return IsingFusionLaw(2*eta, eta);
 end intrinsic;
 /*
 
@@ -663,7 +693,6 @@ intrinsic RepresentationFusionLaw(D::LieRepDec) -> FusLaw
   T`name := Sprintf("Lie Representation fusion law for %o", RootDatum(D));
   return T;
 end intrinsic;
-
 //-----------------------------------------------------------
 //
 // Code to load and save a fusion law in the json format

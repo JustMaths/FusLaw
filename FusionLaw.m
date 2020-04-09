@@ -45,7 +45,7 @@ intrinsic Print(T::FusLaw)
   Prints a fusion law.
   }
   if assigned T`name then
-    printf "%o fusion table.\n\n", T`name;
+    printf "%o fusion law.\n\n", T`name;
   end if;
 
   obj := T`set;
@@ -549,8 +549,12 @@ intrinsic FusionLaw(T::FusTab) -> FusLaw
   }
 
   if T`name in {"Monster", "Ising", "Jordan"} then
-    params := [ al : al in T`eigenvalues | al notin {0,1} ];
-    params := Join([Sprintf("%o", al) : al in params], ",");
+    if T`name eq "Monster" then
+      params := "";
+    else
+      params := [ al : al in T`eigenvalues | al notin {0,1} ];
+      params := Join([Sprintf("%o", al) : al in params], ",");
+    end if;
     return eval(Sprintf("%oFusionLaw(%o)", T`name, params));
   end if;
   

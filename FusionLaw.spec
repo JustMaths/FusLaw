@@ -1,4 +1,7 @@
 {
   FusionLaw.m
-  json.m
+  MagmaJson
+    {
+    +json_and_utilities.spec
+    }
 }

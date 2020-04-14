@@ -1,0 +1,4 @@
+[submodule "MagmaJson"]
+	path = MagmaJson
+	url = https://github.com/JustMaths/MagmaJson
+	branch = master

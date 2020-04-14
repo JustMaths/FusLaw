@@ -676,7 +676,7 @@ intrinsic RepresentationFusionLaw(CT::SeqEnum[AlgChtrElt]) -> FusLaw
 
   if assigned Universe(CT)`Group then
     T`name := Sprintf("Representation fusion law for %o", GroupName(Group(Universe(CT))));
-    T`directory := Sprintf("Rep_fusion_law_%o", MyGroupName(Group(Universe(CT))));
+    T`directory := Sprintf("Rep_fusion_law_%o", DirectoryGroupName(Group(Universe(CT))));
   end if;
   return T;
 end intrinsic;

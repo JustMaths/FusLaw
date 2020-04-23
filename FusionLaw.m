@@ -582,7 +582,7 @@ intrinsic JordanFusionLaw(eta) -> FusLaw
   T`law := [[ {@1@}, {@@}, {@3@}], [ {@@}, {@2@}, {@3@}], [ {@3@}, {@3@}, {@1,2@}]];
   
   evals := [1, 0, eta];
-  f := map< T`set -> Rationals() | i:->evals[i], j:-> Position(evals,j)>;
+  f := map< T`set -> Parent(eta) | i:->evals[i], j:-> Position(evals,j)>;
   AssignEvaluation(~T, f);
   _ := UsefulFusionRules(T);
 

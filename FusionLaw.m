@@ -86,6 +86,13 @@ intrinsic Print(T::FusLaw)
   end if;
 end intrinsic;
 
+intrinsic Directory(T::FusLaw) -> MonStgElt
+  {
+  Returns the directory associated with the fusion law.
+  }
+  return T`directory;
+end intrinsic;
+
 intrinsic Hash(T::FusLaw) -> RngIntElt
   {
   Returns the hash value of T.
@@ -93,7 +100,13 @@ intrinsic Hash(T::FusLaw) -> RngIntElt
   return Hash(<T`set, T`law>);
 end intrinsic
 
-// Edit this!!
+intrinsic IsSymmetric(T::FusLaw) -> BoolElt
+  {
+  Checks whether a fusion law is symmetric.
+  }
+  return forall{<x,y> : x,y in Elements(T) | x*y eq y*x};
+end intrinsic;
+
 intrinsic 'eq'(A::FusLaw, B::FusLaw) -> BoolElt
   {
   Checks whether the set and table are the same.
@@ -114,13 +127,6 @@ intrinsic 'eq'(A::FusLaw, B::FusLaw) -> BoolElt
   end if;
   
   return true; // neither has an evaluation
-end intrinsic;
-
-intrinsic IsSymmetric(T::FusLaw) -> BoolElt
-  {
-  Checks whether a fusion law is symmetric.
-  }
-  return forall{<x,y> : x,y in Elements(T) | x*y eq y*x};
 end intrinsic;
 
 intrinsic IsIsomorphic(A::FusLaw, B::FusLaw) -> BoolElt, GrpPermElt
@@ -716,7 +722,7 @@ intrinsic FusTabToList(T::FusLaw) -> List
 
   if assigned T`name then
     Append(~L, <"name", T`name>);
-    Append(~L, <"directory", T`directory>);
+    Append(~L, <"directory", Directory(T)>);
   end if;
 
   set := Setseq(T`set);

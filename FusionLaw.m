@@ -614,6 +614,28 @@ end intrinsic;
 Returns the Ising type law.
 
 */
+intrinsic IsingFusionLaw(: evaluation:=true) -> FusLaw
+  {
+  Returns the fusion table of Ising type alpha, beta.  Optionally with an evaluation to the function field Q(al, bt).
+  }
+  T := New(FusLaw);
+  T`name := "Ising";
+  T`directory := "Ising_al_bt";
+  T`set := {@ 1, 2, 3, 4 @};
+  T`law := [[ {@1@}, {@@}, {@3@}, {@4@}], [ {@@}, {@2@}, {@3@}, {@4@}], [ {@3@}, {@3@}, {@1,2@}, {@4@}], [ {@4@}, {@4@}, {@4@}, {@1,2,3@}]];
+  
+  if evaluation then
+    F<al, bt> := FunctionField(Rationals(), 2);
+    evals := [1, 0, al, bt];
+    f := map< T`set -> F | i:->evals[i], j:-> Position(evals,j)>;
+    AssignEvaluation(~T, f);
+  end if;
+
+  _ := UsefulFusionRules(T);
+
+  return T;
+end intrinsic;
+
 intrinsic IsingFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
   {
   Returns the fusion table of Ising type alpha, beta.

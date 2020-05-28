@@ -751,8 +751,8 @@ intrinsic FusionLaw(A::Assoc) -> FusLaw
 
   if "evaluation" in keys then
     evals := Numbers(A["evaluation"]);
-    T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
     T`eigenvalues := IndexedSet(evals);
+    T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
   end if;
 
   _ := UsefulFusionRules(T);

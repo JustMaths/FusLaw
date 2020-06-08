@@ -501,18 +501,21 @@ Calculates the useful fusion rules.
 */
 intrinsic UsefulFusionRules(T::FusLaw) -> SetIndx
   {
-  Returns those fusion rules for a Z_2-graded table which are useful.
+  Returns those fusion rules which are useful.  That is, triples of pure subsets I, J, K such that  I*J = K, where K is not a maximal pure subset and there does not exist I' containing I, or J' containing J with I'*J = K, or I*J' = K.
   }
+  require IsSymmetric(T): "The fusion law is not symmetric";
   if assigned T`useful then
     return T`useful;
   end if;
   set := Elements(T);
   G, grad := FinestAdequateGrading(T);
-  require Order(G) eq 2: "The group is %o-graded.", G;
-  pos := {@ i : i in set | i @ grad eq G!1 @};
-  subsets := {@ S : S in Subsets(Set(pos)) | S ne {} @};
-  Sort(~subsets, func< x,y | #y-#x>);
-
+  
+  // We just need to consider the pure subsets - those subsets which are fully contained in a graded piece
+  graded_pieces := {@ {@ i : i in set | i @ grad eq g @} : g in G@};
+  subsets := &join{@ Sort({@ S : S in Subsets(Set(piece)) | S ne {} @}, func< x,y | #y-#x>) : piece in graded_pieces @};
+  // We have sorted these so the largest subsets are first in each graded collonade
+  
+  // We create a larger fusion table on the set of all pure subsets
   FT := [ [] : i in [1..#subsets]];
   for i in [1..#subsets] do
     for j in [1..i] do
@@ -525,10 +528,13 @@ intrinsic UsefulFusionRules(T::FusLaw) -> SetIndx
   for i in [1..#subsets] do
     row := Set(FT[i]);
     for S in row do
-      pos := Position(FT[i], S);
-      assert exists(j){ j : j in [1..i] | FT[j,pos] eq FT[i,pos]};
-      if j ne 1 or pos ne 1 then
-        if i le pos then
+      if S in graded_pieces then
+        continue;
+      end if;
+      pos := Position(FT[i], S);  // find the first position it appears in the row
+      assert exists(j){ j : j in [1..i] | FT[j,pos] eq FT[i,pos]};  // Look for an earlier column
+      if not subsets[j] in graded_pieces or not subsets[pos] in graded_pieces then
+        if i le pos then // only want to add a rule once
           Include(~T`useful, < subsets[pos], subsets[j], Set(FT[j,pos])>);
         else
           Include(~T`useful, < subsets[j], subsets[pos], Set(FT[j,pos])>);
@@ -779,11 +785,9 @@ intrinsic FusionLaw(A::Assoc) -> FusLaw
 
   if "evaluation" in keys then
     evals := Numbers(A["evaluation"]);
-    T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
     T`eigenvalues := IndexedSet(evals);
+    T`evaluation := map< T`set -> T`eigenvalues | [ <i, evals[i]> : i in T`set]>;
   end if;
-
-  _ := UsefulFusionRules(T);
 
   return T;
 end intrinsic;

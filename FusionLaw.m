@@ -642,7 +642,7 @@ intrinsic IsingFusionLaw(: evaluation:=true) -> FusLaw
   return T;
 end intrinsic;
 
-intrinsic IsingFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
+intrinsic IsingFusionLaw(alpha::RngElt, beta::RngElt) -> FusLaw
   {
   Returns the fusion table of Ising type alpha, beta.
   }
@@ -654,10 +654,11 @@ intrinsic IsingFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
   T`law := [[ {@1@}, {@@}, {@3@}, {@4@}], [ {@@}, {@2@}, {@3@}, {@4@}], [ {@3@}, {@3@}, {@1,2@}, {@4@}], [ {@4@}, {@4@}, {@4@}, {@1,2,3@}]];
   
   evals := [1, 0, alpha, beta];
+  R := Universe(evals);
   if alpha ne beta then
-    f := map< T`set -> Rationals() | i:->evals[i], j:-> Position(evals,j)>;
+    f := map< T`set -> R | i:->evals[i], j:-> Position(evals,j)>;
   else
-    f := map< T`set -> Rationals() | i:->evals[i]>;
+    f := map< T`set -> R | i:->evals[i]>;
   end if;
   AssignEvaluation(~T, f);
   _ := UsefulFusionRules(T);
@@ -665,7 +666,7 @@ intrinsic IsingFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
   return T;
 end intrinsic;
 
-intrinsic MonsterFusionLaw(alpha::FldRatElt, beta::FldRatElt) -> FusLaw
+intrinsic MonsterFusionLaw(alpha::RngElt, beta::RngElt) -> FusLaw
   {
   Returns the fusion table of Ising type alpha, beta.
   }

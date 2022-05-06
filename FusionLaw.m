@@ -160,7 +160,7 @@ intrinsic Evaluation(T::FusLaw) -> Map
   return eval_map;
 end intrinsic;
 
-intrinsic Eigenvalues(T::FusLaw) -> Map
+intrinsic Eigenvalues(T::FusLaw) -> SetIndx
   {
   If the fusion law has an evaluation, return the image of the evaluation map.  Else returns an error.
   }

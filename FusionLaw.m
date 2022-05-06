@@ -40,6 +40,13 @@ intrinsic Elements(T::FusLaw) -> SetIndx
   return ChangeUniverse(T`set, T);
 end intrinsic;
 
+intrinsic '#'(T::FusLaw) -> RngIntElt
+  {
+  Returns the size of the fusion law.
+  }
+  return #Elements(T);
+end intrinsic;
+
 intrinsic Print(T::FusLaw)
   {
   Prints a fusion law.
@@ -379,6 +386,40 @@ end intrinsic;
 // ============ Functions on a FusTab ============
 //
 //
+/*
+
+Permute the entries of a fusion law
+
+*/
+intrinsic Permute(T::FusLaw, g::GrpPermElt) -> FusLaw
+  {
+  Reorder the elements of the Fusion Law T according to the permutation g.
+  }
+  Tnew := New(FusLaw);
+  require IsCoercible(Sym(#T), g): "The permutation must be on the fusion law";
+  
+  Tnew`set := IndexedSet(PermuteSequence(Setseq(T`set), g));
+  Tnew`law := PermuteSequence([ PermuteSequence([ S : S in t], g) : t in T`law ], g);
+  
+  for attr in [ "name", "directory"] do
+    if assigned T``attr then
+      Tnew``attr := T``attr;
+    end if;
+  end for;
+  
+  if assigned T`evaluation then
+    AssignEvaluation(~Tnew, T`evaluation);
+  end if;
+
+  // implement these too!
+  /*
+  useful,        // a SetIndx of tuples of the useful fusion rules
+  group,         // a GrpPerm which is the grading on the table
+  grading;       // a map from the values to the group giving the grading
+  */
+  
+  return Tnew;
+end intrinsic;
 /*
 
 A sub fusion table

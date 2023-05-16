@@ -383,7 +383,7 @@ intrinsic ChangeRing(T::FusLaw, R::Rng) -> FusLaw
 end intrinsic;
 //
 //
-// ============ Functions on a FusTab ============
+// ============ Functions on a FusLaw ============
 //
 //
 /*
@@ -783,9 +783,9 @@ end intrinsic;
 Code to serialise a fusion law
 
 */
-intrinsic FusTabToList(T::FusLaw) -> List
+intrinsic FusLawToList(T::FusLaw) -> List
   {
-  Transform a fusion table to a List prior to serialising as a JSON.
+  Transform a fusion law to a List prior to serialising as a JSON.
   }
   L := [* *];
   Append(~L, <"class", "Fusion law">);

@@ -142,6 +142,79 @@ intrinsic IsIsomorphic(A::FusLaw, B::FusLaw) -> BoolElt, GrpPermElt
   }
   // Not yet implemented.
 end intrinsic;
+
+intrinsic '+'(A::FusLaw, B::FusLaw) -> FusLaw
+  {
+    Compute the coproduct (disjoint union) of two fusion laws.
+  }
+  setA := A`set;
+  setB := B`set;
+  if IsEmpty(setA meet setB) then
+    addIdx := false;
+    setAB := setA join setB;
+    law :=
+      [[ A`law[i,j] : j in [1..#setA] ] cat [ {@@} : j in [1..#setB] ]
+        : i in [1..#setA] ] cat
+      [[{@@} : j in [1..#setA]] cat [ B`law[i,j] : j in [1..#setB] ]
+        : i in [1..#setB] ];
+  else
+    addIdx := true;
+    setAB := IndexedSet([<1, a> : a in setA] cat
+                        [<2, b> : b in setB ]);
+    law :=
+      [[ IndexedSet([ <1,a> : a in A`law[i,j]]) : j in [1..#setA] ] cat [ {@@} : j in [1..#setB] ]
+        : i in [1..#setA] ] cat
+      [[{@@} : j in [1..#setA]] cat [ IndexedSet([ <2,b> : b in B`law[i,j]]) : j in [1..#setB] ]
+        : i in [1..#setB] ];
+  end if;
+
+  T := New(FusLaw);
+  T`set := setAB;
+  T`law := law;
+  hasA, evA := HasEvaluation(A);
+  hasB, evB := HasEvaluation(B);
+  if hasA and hasB then
+    hasCover, cod := ExistsCoveringStructure(Codomain(evA), Codomain(evB));
+    if not hasCover then
+      print "Failed to merge evaluations: can't find cover of structures.";
+      return T;
+    end if;
+    if addIdx then
+      mp := map< setAB -> cod | i :-> i[1] eq 1 select i[2]@evA else i[2]@evB >;
+    else
+      mp := map< setAB -> cod | i :-> i in setA select i@evA else i@evB >;
+    end if;
+    AssignEvaluation(~T, mp);
+  end if;
+  return T; 
+end intrinsic;
+
+intrinsic 'join'(A::FusLaw, B::FusLaw) -> FusLaw
+  {
+    Merge the fusions laws of A and B. A and B must have identitcal fusion law 
+      elements.
+  }
+  setA := A`set;
+  setB := B`set;
+  require setA eq setB: "A and B must have the same fusion law elements.";
+  law :=
+    [ [ A`law[i,j] join B`law[i,j] : j in [1..#setA] ] : i in [1..#setA] ];
+  T := New(FusLaw);
+  T`set := setA;
+  T`law := law;
+  hasA, evA := HasEvaluation(A);
+  hasB, evB := HasEvaluation(B);
+  if hasA and not hasB then
+    AssignEvaluation(~T, evA);
+  elif not hasA and hasB then
+    AssignEvaluation(~T, evB);
+  elif hasA and hasB then
+    require forall{ x : x in setA | x@evA eq x@evB }: "Evaluations must match.";
+    AssignEvaluation(~T, evA);
+  end if;
+  return T;
+end intrinsic;
+
 /*
 
 ======= Evaluation maps =======
@@ -152,7 +225,8 @@ intrinsic HasEvaluation(T::FusLaw) -> BoolElt, Map
   Does the fusion law have an evaluation map?  If so, also returns the map.
   }
   if assigned T`evaluation then
-    return true, map< T -> Codomain(T`evaluation) | x:-> (x`elt)@T`evaluation>;
+    return true, map< T -> Codomain(T`evaluation) | x:-> (x`elt)@T`evaluation,
+      y :-> y@@T`evaluation >;
   else
     return false, _;
   end if;
@@ -724,6 +798,27 @@ intrinsic HyperJordanFusionLaw(eta::FldRatElt) -> FusLaw
   }
   return IsingFusionLaw(2*eta, eta);
 end intrinsic;
+
+intrinsic SingletonFusionLaw(:empty := true, label := false, 
+                   evaluation := false) -> FusLaw
+  {
+    Returns a fusion law with a single element. Optional arguments specify if 
+      the x * x is empty or x. Also a label and/or evaluation can be specified.
+  }
+  T := New(FusLaw);
+  if Type(label) eq BoolElt then
+    label := 1;
+  end if;
+  T`set := {@ label @};
+  T`law := empty select [[{@@}]] else [[{@label@}]];
+  if Type(evaluation) ne BoolElt then
+  AssignEvaluation(~T,  
+        map< T`set -> Parent(evaluation) |
+          i:-> evaluation, j:-> label>);
+  end if;
+  return T;
+end intrinsic;
+
 /*
 
 Creates the representation fusion law

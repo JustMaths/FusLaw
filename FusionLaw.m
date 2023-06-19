@@ -275,7 +275,9 @@ intrinsic AssignEvaluation(T::FusLaw, f::Map: check:=true) -> FusLaw
   }
   Tnew := New(FusLaw);
   for attr in GetAttributes(FusLaw) do
-    Tnew``attr := T``attr;
+    if assigned T``attr then
+      Tnew``attr := T``attr;
+    end if;
   end for;
 
   AssignEvaluation(~Tnew, f: check:=check);

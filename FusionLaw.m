@@ -512,11 +512,11 @@ intrinsic SubConstructor(T::FusLaw, X::.) -> FusLaw
     if ISA(Type(x), MakeType("Set")) then
       so, xx := CanChangeUniverse(x, T);
       require so: "Not all the elements in the second argument are coercible into the fusion law.";
-      XX join:= xx;
+      XX := XX join xx;  // join:= doesn't seem to work here.
     else
       so, xx := IsCoercible(T, x);
       require so: "Not all the elements in the second argument are coercible into the fusion law.";
-      XX join:= {@ xx @};
+      XX := XX join {@ xx @};  // join:= doesn't seem to work here.
     end if;
   end for;
   

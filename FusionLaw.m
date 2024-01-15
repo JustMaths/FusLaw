@@ -894,7 +894,7 @@ intrinsic FusLawToList(T::FusLaw) -> List
 
   set := Setseq(T`set);
   Append(~L, <"set", set>);
-  Append(~L, <"law", T`law>);
+  Append(~L, <"law", [ [ Setseq(S) : S in t] : t in T`law]>);
 
   if assigned T`evaluation then
     Append(~L, <"evaluation", set@T`evaluation>);

@@ -597,7 +597,8 @@ intrinsic FinestAdequateGrading(T::FusLaw) -> GrpPerm, Map
   end for;
 
   G, map := quo<F|rels>;
-  assert Order(G) le #set;
+  require IsFinite(G): "This function currently is restricted to when the fusion law has a finite grading.";
+  assert Order(G) le #set; // Not true if there is an infinite grading
   GG, iso := PermutationGroup(G);
   T`group := GG;
   T`grading := map< Elements(T) -> GG | i:-> (F.genno[i`elt] @map)@@iso>;

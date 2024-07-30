@@ -14,12 +14,12 @@ declare type FusLaw[FusLawElt];
 declare attributes FusLaw:
   set,           // a SetIndx of elements
   law,           // table of values for the fusion law  
-  name,          // the name of the fusion table
+  name,          // the name of the fusion law
   directory,     // a name to use as a directory to save under
   evaluation,    // a map from set to eigenvalues
   eigenvalues,   // a SetIndx of eigenvalues
   useful,        // a SetIndx of tuples of the useful fusion rules
-  group,         // a GrpPerm which is the grading on the table
+  group,         // a Grp which is the grading on the table, if finite then a GrpPerm, if not then a GrpAb
   grading;       // a map from the values to the group giving the grading
 
 // NB the evaluation is stored internally as a map from the set, but is converted to a map from fusion law elements when the evaluation map is asked for.  Otherwise, if it were stored in the correct form, when checking equality of FusLaws, it produces a circular argument, having to check the Domains of the maps are equal.
@@ -416,7 +416,7 @@ end intrinsic;
 //
 /*
 
-Changes the field for the fusion table.
+Changes the field for the fusion law.
 
 */
 intrinsic ChangeField(T::FusLaw, F::Fld) -> FusLaw
@@ -490,7 +490,7 @@ intrinsic Permute(T::FusLaw, g::GrpPermElt) -> FusLaw
   // implement these too!
   /*
   useful,        // a SetIndx of tuples of the useful fusion rules
-  group,         // a GrpPerm which is the grading on the table
+  group,         // a Grp which is the grading on the table
   grading;       // a map from the values to the group giving the grading
   */
   
@@ -498,7 +498,7 @@ intrinsic Permute(T::FusLaw, g::GrpPermElt) -> FusLaw
 end intrinsic;
 /*
 
-A sub fusion table
+A sub fusion law
 
 */
 // NB no inclusion map defined here
@@ -550,58 +550,53 @@ end intrinsic;
 Calculates the grading for the fusion law.
 
 */
-intrinsic FinestAdequateGrading(T::FusLaw) -> GrpPerm, Map
+intrinsic FinestAdequateGrading(T::FusLaw) -> Grp, Map
   {
-  Calculates the finest adequate grading group G and the grading function gr:F -> G.
+  Calculates the finest adequate grading group G and the grading function gr:F -> G. If the grading is finite a permutation group is returned, otherwise an abelian group is returned.
   }
   if assigned T`group then
     return T`group, T`grading;
   end if;
+  
+  require IsSymmetric(T): "This function is currently restricted to symmetric fusion laws.";
   // We form a group whose generators are the elements of the set and relations given by the table to find the grading.
-  // Any elements which are in a set which is an entry in the fusion table must have the same grading
+  // Any elements which are in a set which is an entry in the fusion law must have the same grading
+  // Can define a graph on the fusion law with edges if the two elements are contained in some entry in the fusion law
   set := T`set;
-  entries := {@ S : S in Flat(T`law) | S ne {@@} @};
-  Sort(~entries, func<x,y|#y-#x>);
-  gens := [* e : e in entries *];
-  for e in entries do
-    gens := [* #(e meet g) ne 0 select e join g else g : g in gens *];
-  end for;
-  gens := {@ g : g in gens @};
+  edges := &join { Subsets(Set(S),2) : S in Flat(T`law)};
+  grph := Graph<set|edges>;
+  
+  // Graph vertices are indexed the same as the set they come from.
+  gens := {@ {@ set[Index(v)] : v in C @} : C in ConnectedComponents(grph)@};
 
+  d := #gens;
   // We set up a function to give the generator number of an eigenvalue
-  genno := AssociativeArray();
-  for e in set do
-    assert exists(i){g : g in gens | e in g };
-    genno[e] := Position(gens, i);
-  end for;
+  genno := map<set -> [1..d] | Flat([ [<e, i> : e in gens[i]] : i in [1..d]])>;
 
-  F := FreeAbelianGroup(#gens);
-  rels := [ F.genno[1] ];
-
+  F := FreeAbelianGroup(d);
+  rels := [];
+  
   // We build some relations
-  e1 := gens[genno[1]];
-  for i in e1 do
-    for j in set diff e1 do
-      for prod in T`law[Position(set,i), Position(set,j)] do
-        Append(~rels, F.genno[j] - F.genno[prod]);
-      end for;
-    end for;
-  end for;
-  for i in set diff e1 do
-    for j in set diff e1 do
-      for prod in T`law[Position(set,i), Position(set,j)] do
-        Append(~rels, F.genno[i] + F.genno[j] - F.genno[prod]);
-        Append(~rels, F.genno[j] + F.genno[i] - F.genno[prod]);
-      end for;
+  for i in [1..#set] do
+    for j in [i..#set] do
+      for prod in T`law[i, j] do
+        Append(~rels, F.(set[i]@genno) + F.(set[j]@genno) - F.(prod@genno));
+       end for;
     end for;
   end for;
 
   G, map := quo<F|rels>;
-  require IsFinite(G): "This function currently is restricted to when the fusion law has a finite grading.";
-  assert Order(G) le #set; // Not true if there is an infinite grading
-  GG, iso := PermutationGroup(G);
-  T`group := GG;
-  T`grading := map< Elements(T) -> GG | i:-> (F.genno[i`elt] @map)@@iso>;
+  
+  if IsFinite(G) then
+    assert Order(G) le #set; // Not true if there is an infinite grading
+    GG, iso := PermutationGroup(G);
+    T`group := GG;
+    T`grading := map< Elements(T) -> GG | i:-> (F.(i`elt@genno)@map)@@iso>;
+  else
+    T`group := G;
+    T`grading := map< Elements(T) -> G | i:-> F.(i`elt@genno)@map>;
+  end if;
+
   return T`group, T`grading;
 end intrinsic;
 
@@ -629,11 +624,11 @@ intrinsic UsefulFusionRules(T::FusLaw) -> SetIndx
   G, grad := FinestAdequateGrading(T);
   
   // We just need to consider the pure subsets - those subsets which are fully contained in a graded piece
-  graded_pieces := {@ {@ i : i in set | i @ grad eq g @} : g in G@};
+  graded_pieces := {@ {@ i : i in set | i @ grad eq g @} : g in Image(grad)@};
   subsets := &join{@ Sort({@ S : S in Subsets(Set(piece)) | S ne {} @}, func< x,y | #y-#x>) : piece in graded_pieces @};
   // We have sorted these so the largest subsets are first in each graded collonade
   
-  // We create a larger fusion table on the set of all pure subsets
+  // We create a larger fusion law on the set of all pure subsets
   FT := [ [] : i in [1..#subsets]];
   for i in [1..#subsets] do
     for j in [1..i] do
@@ -668,36 +663,67 @@ end intrinsic;
 // ============ Some Examples ============
 //
 //
+intrinsic SingletonFusionLaw(:empty := true, label := false, 
+                   evaluation := false) -> FusLaw
+  {
+  Returns a fusion law with a single element. Optional arguments specify if the x * x is empty or x. Also a label and/or evaluation can be specified.
+  }
+  T := New(FusLaw);
+  if Type(label) eq BoolElt then
+    label := 1;
+  end if;
+  T`set := {@ label @};
+  T`law := empty select [[{@@}]] else [[{@label@}]];
+  if Type(evaluation) ne BoolElt then
+  AssignEvaluation(~T,  
+        map< T`set -> Parent(evaluation) |
+          i:-> evaluation, j:-> label>);
+  end if;
+  return T;
+end intrinsic;
+
+intrinsic AssociativeFusionLaw() -> FusLaw
+  {
+  Returns the associative fusion law.
+  }
+  T := New(FusLaw);
+  T`name := "Associative";
+  T`directory := "Associative_1_0";
+  T`set := {@ 1, 2 @};
+  T`law := [[ {@1@}, {@@}], [ {@@}, {@2@}]];
+  
+  evals := [1, 0];
+  f := map< T`set -> Rationals() | i:->evals[i], j:-> Position(evals,j)>;
+  AssignEvaluation(~T, f);
+  _ := UsefulFusionRules(T);
+  
+  return T;
+end intrinsic;
 /*
 
 Returns the Jordan type fusion law.
 
 */
-intrinsic FusionLaw(T::FusTab) -> FusLaw
+intrinsic JordanFusionLaw(: evaluation:=true) -> FusLaw
   {
-  Converts a fusion table to a fusion law.  Old version to new version.
+  Returns the fusion law of Jordan type eta.  Optionally with an evaluation to the function field Q(eta).
   }
-
-  if T`name in {"Monster", "Ising", "Jordan"} then
-    if T`name eq "Monster" then
-      params := "";
-    else
-      params := [ al : al in T`eigenvalues | al notin {0,1} ];
-      params := Join([Sprintf("%o", al) : al in params], ",");
-    end if;
-    return eval(Sprintf("%oFusionLaw(%o)", T`name, params));
+  T := New(FusLaw);
+  T`name := "Jordan";
+  T`directory := "Jordan_eta";
+  T`set := {@ 1, 2, 3 @};
+  T`law := [[ {@1@}, {@@}, {@3@}], [ {@@}, {@2@}, {@3@}], [ {@3@}, {@3@}, {@1,2@}]];
+  
+  if evaluation then
+    F<eta> := FunctionField(Rationals());
+    evals := [1, 0, eta];
+    f := map< T`set -> F | i:->evals[i], j:-> Position(evals,j)>;
+    AssignEvaluation(~T, f);
   end if;
   
-  Tnew := New(FusLaw);
-  Tnew`name := T`name;
-  Tnew`directory := T`directory;
-  Tnew`set := T`eigenvalues;
-  Tnew`law := T`table;
-  f := map< Tnew`set -> Tnew`set | i:->i, j:->j>;
-  AssignEvaluation(~Tnew, f);
-  _ := UsefulFusionRules(Tnew);
+  _ := UsefulFusionRules(T);
 
-  return Tnew;
+  return T;
 end intrinsic;
 
 intrinsic JordanFusionLaw(eta) -> FusLaw
@@ -723,28 +749,13 @@ end intrinsic;
 Returns the Monster fusion law.
 
 */
-intrinsic MonsterFusionLaw() -> FusLaw
+intrinsic MonsterFusionLaw(: evaluation:=true) -> FusLaw
   {
-  Returns the fusion table for the Monster.
-  }
-  T := IsingFusionLaw(1/4, 1/32);
-  T`name := "Monster";
-  T`directory := "Monster_1,4_1,32";
-
-  return T;
-end intrinsic;
-/*
-
-Returns the Ising type law.
-
-*/
-intrinsic IsingFusionLaw(: evaluation:=true) -> FusLaw
-  {
-  Returns the fusion table of Ising type alpha, beta.  Optionally with an evaluation to the function field Q(al, bt).
+  Returns the fusion law of Monster type alpha, beta.  Optionally with an evaluation to the function field Q(al, bt).
   }
   T := New(FusLaw);
-  T`name := "Ising";
-  T`directory := "Ising_al_bt";
+  T`name := "Monster";
+  T`directory := "Monster_al_bt";
   T`set := {@ 1, 2, 3, 4 @};
   T`law := [[ {@1@}, {@@}, {@3@}, {@4@}], [ {@@}, {@2@}, {@3@}, {@4@}], [ {@3@}, {@3@}, {@1,2@}, {@4@}], [ {@4@}, {@4@}, {@4@}, {@1,2,3@}]];
   
@@ -760,14 +771,14 @@ intrinsic IsingFusionLaw(: evaluation:=true) -> FusLaw
   return T;
 end intrinsic;
 
-intrinsic IsingFusionLaw(alpha::RngElt, beta::RngElt) -> FusLaw
+intrinsic MonsterFusionLaw(alpha::RngElt, beta::RngElt) -> FusLaw
   {
-  Returns the fusion table of Ising type alpha, beta.
+  Returns the fusion law of Monster type alpha, beta.
   }
   require #({alpha, beta} meet {1,0}) eq 0 : "The parameters may not be 0, or 1.";
   T := New(FusLaw);
-  T`name := "Ising";
-  T`directory := Join(Split(Sprintf("Ising_%o_%o", alpha, beta), "/"), ",");
+  T`name := "Monster";
+  T`directory := Join(Split(Sprintf("Monster_%o_%o", alpha, beta), "/"), ",");
   T`set := {@ 1, 2, 3, 4 @};
   T`law := [[ {@1@}, {@@}, {@3@}, {@4@}], [ {@@}, {@2@}, {@3@}, {@4@}], [ {@3@}, {@3@}, {@1,2@}, {@4@}], [ {@4@}, {@4@}, {@4@}, {@1,2,3@}]];
   
@@ -783,13 +794,6 @@ intrinsic IsingFusionLaw(alpha::RngElt, beta::RngElt) -> FusLaw
 
   return T;
 end intrinsic;
-
-intrinsic MonsterFusionLaw(alpha::RngElt, beta::RngElt) -> FusLaw
-  {
-  Returns the fusion table of Ising type alpha, beta.
-  }
-  return IsingFusionLaw(alpha, beta);
-end intrinsic;
 /*
 
 Returns the extended Jordan-type law.
@@ -797,31 +801,10 @@ Returns the extended Jordan-type law.
 */
 intrinsic HyperJordanFusionLaw(eta::FldRatElt) -> FusLaw
   {
-  Returns the fusion table of extended Jordan-type eta.
+  Returns the fusion law of extended Jordan-type eta.
   }
-  return IsingFusionLaw(2*eta, eta);
+  return MonsterFusionLaw(2*eta, eta);
 end intrinsic;
-
-intrinsic SingletonFusionLaw(:empty := true, label := false, 
-                   evaluation := false) -> FusLaw
-  {
-    Returns a fusion law with a single element. Optional arguments specify if 
-      the x * x is empty or x. Also a label and/or evaluation can be specified.
-  }
-  T := New(FusLaw);
-  if Type(label) eq BoolElt then
-    label := 1;
-  end if;
-  T`set := {@ label @};
-  T`law := empty select [[{@@}]] else [[{@label@}]];
-  if Type(evaluation) ne BoolElt then
-  AssignEvaluation(~T,  
-        map< T`set -> Parent(evaluation) |
-          i:-> evaluation, j:-> label>);
-  end if;
-  return T;
-end intrinsic;
-
 /*
 
 Creates the representation fusion law
@@ -873,6 +856,37 @@ intrinsic RepresentationFusionLaw(D::LieRepDec) -> FusLaw
 end intrinsic;
 //-----------------------------------------------------------
 //
+// Code to convert a FusTab (old object) to a FusLaw
+//
+//-----------------------------------------------------------
+intrinsic FusionLaw(T::FusTab) -> FusLaw
+  {
+  Converts a fusion table to a fusion law.  Old version to new version.
+  }
+
+  if T`name in {"Monster", "Ising", "Jordan"} then
+    if T`name eq "Monster" then
+      params := "1/4, 1/32";
+    else
+      params := [ al : al in T`eigenvalues | al notin {0,1} ];
+      params := Join([Sprintf("%o", al) : al in params], ",");
+    end if;
+    return eval(Sprintf("%oFusionLaw(%o)", T`name, params));
+  end if;
+  
+  Tnew := New(FusLaw);
+  Tnew`name := T`name;
+  Tnew`directory := T`directory;
+  Tnew`set := T`eigenvalues;
+  Tnew`law := T`table;
+  f := map< Tnew`set -> Tnew`set | i:->i, j:->j>;
+  AssignEvaluation(~Tnew, f);
+  _ := UsefulFusionRules(Tnew);
+
+  return Tnew;
+end intrinsic;
+//-----------------------------------------------------------
+//
 // Code to load and save a fusion law in the json format
 //
 //-----------------------------------------------------------
@@ -905,12 +919,12 @@ intrinsic FusLawToList(T::FusLaw) -> List
 end intrinsic;
 /*
 
-Code to load a fusion table.
+Code to load a fusion law.
 
 */
 intrinsic FusionLaw(A::Assoc) -> FusLaw
   {
-  Create a fusion table T from an associative array.  We assume that the associative array represents T stored in json format.
+  Create a fusion law T from an associative array.  We assume that the associative array represents T stored in json format.
   }
   keys := Keys(A);
   require "class" in keys and A["class"] eq "Fusion law": "The file given does not have a valid fusion law.";
